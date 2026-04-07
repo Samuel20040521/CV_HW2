@@ -32,10 +32,8 @@ def get_dataloader(
     ###############################
     if split == 'train':
         transform = transforms.Compose([
-            transforms.Resize((32,32)),
-            ##### TODO: Data Augmentation Begin #####
-            
-            ##### TODO: Data Augmentation End #####
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -63,7 +61,7 @@ def get_dataloader(
 
 class CIFAR10Dataset(Dataset):
     def __init__(self, dataset_dir, split='test', transform=None):
-        super(CIFAR10Dataset).__init__()
+        super().__init__()
         self.dataset_dir = dataset_dir
         self.split = split
         self.transform = transform
@@ -72,7 +70,7 @@ class CIFAR10Dataset(Dataset):
             json_data = json.load(f)
         
         self.image_names = json_data['filenames']
-        if self.split != 'test':
+        if self.split not in ['test', 'unlabel']:
             self.labels = json_data['labels']
 
         print(f'Number of {self.split} images is {len(self.image_names)}')
@@ -81,26 +79,15 @@ class CIFAR10Dataset(Dataset):
         return len(self.image_names)
     
     def __getitem__(self, index):
-
-        ########################################################
-        # TODO:                                                #
-        # Define the CIFAR10Dataset class:                     #
-        #   1. use Image.open() to load image according to the # 
-        #      self.image_names                                #
-        #   2. apply transform on image                        #
-        #   3. if not test set, return image and label with    #
-        #      type "long tensor"                              #
-        #   4. else return image only                          #
-        #                                                      #
-        # NOTE:                                                #
-        # You will not have labels if it's test set            #
-        ########################################################
-
-        ###################### TODO End ########################
-
-        pass
+        image_name = self.image_names[index]
+        image_path = os.path.join(self.dataset_dir, image_name)
+        img = Image.open(image_path).convert('RGB')
+        
+        if self.transform is not None:
+            img = self.transform(img)
             
-        # return {
-        #     'images': image, 
-        #     'labels': label
-        # }
+        if self.split not in ['test', 'unlabel']:
+            label = self.labels[index]
+            return {'images': img, 'labels': torch.tensor(label, dtype=torch.long)}
+        else:
+            return {'images': img}

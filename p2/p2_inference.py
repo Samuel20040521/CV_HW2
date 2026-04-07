@@ -64,18 +64,11 @@ def main():
     model.eval()
     with torch.no_grad():
         test_start_time = time.time()
-        #############################################################
-        # TODO:                                                     #
-        # Finish forward part in inference process, similar to      #
-        # validation, and append predicted label to 'predictions'   #
-        # list.                                                     #
-        #                                                           #
-        # NOTE:                                                     #
-        # You don't have to calculate accuracy and loss since you   #
-        # don't have labels.                                        #
-        #############################################################
-   
-        ######################### TODO End ##########################
+        for batch, data in enumerate(test_loader):
+            images = data['images'].to(device)
+            pred = model(images)
+            pred_label = torch.argmax(pred, dim=1).cpu().numpy().tolist()
+            predictions.extend(pred_label)
 
     test_time = time.time() - test_start_time
     print()

@@ -1,49 +1,63 @@
-# Environment Setup (conda is strongly suggested)
+# Computer Vision HW2
 
-Create virtual environment via `conda`.
+This repository contains the implementation for Computer Vision Homework 2 (Spring 2026), including Bag-of-Words Scene Recognition (Part 1) and CNN Image Classification with Semi-supervised learning (Part 2).
+
+## 1. Environment Setup
+
+We strictly use `micromamba` (or `conda`) to manage our dependencies for reproducibility.
 
 ```bash
-# for Windows
-conda create -n cv_hw2_py36 python==3.6.13
-conda activate cv_hw2_py36
-conda install menpo::cyvlfeat
-pip install -r requirements_py36.txt
+# Create environment
+micromamba create -n cv_hw2 python=3.8 -y
+micromamba activate cv_hw2
 
-# for Mac(Intel) / Linux
-conda create -n cv_hw2_py38 python==3.8.20
-conda activate cv_hw2_py38
-conda install -c conda-forge cyvlfeat
+# Install dependencies (from root directory)
 pip install -r requirements_py38.txt
-
-# for Mac(ARM)
-conda create -n cv_hw2_py38
-conda activate cv_hw2_py38
-conda config --env --set subdir osx-64
-conda install python==3.8.20
-conda install -c conda-forge cyvlfeat
-pip install -r requirements_py38.txt
+micromamba install -c conda-forge cyvlfeat -y
 ```
 
-This part is for those who encounter errors while installing `cyvlfeat`. Any version of `cyvlfeat` is allowed. Try one of the following commands to install,
+## 2. Part 1: Bag-of-Words Scene Recognition
 
+In this section, we extract SIFT features to construct a Visual Vocabulary with K-Means and calculate Bag-of-Words histograms, followed by a Custom K-Nearest Neighbor classifier.
+
+To train the Bag-of-Words and Tiny Image algorithms, simply run:
 ```bash
-# (recommend)
-conda install -c conda-forge cyvlfeat
-# (alternative #1)
-conda install menpo::cyvlfeat
-# (alternative #2)
-pip install cyvlfeat
+cd p1
+bash p1_run.sh
 ```
 
-For people have trouble downloading cyvlfeat, try opencv-python
+## 3. Part 2: CNN Image Classification & Semi-Supervised Learning
+
+We implemented a simple Convolution network `MyNet` from scratch, and also adapted the `ResNet18` model for 32x32 image dimensions to push past the Strong Baseline. To further boost accuracy, we appended an experimental Pseudo-Labeling strategy using the `unlabel` dataset inside our training phase.
+
+### A. Download Pretrained Checkpoints (For TA Verification)
+To verify the performance on the `test` or `val` split without training from scratch, you can use `gdown` to download our best `.pth` models directly from Google Drive into the `p2/checkpoint/` repository.
+
+1. Create the checkpoint directory:
 ```bash
-pip install opencv-python
+cd p2
+mkdir -p checkpoint
 ```
 
-# Download Dataset
-
-You can manually download the HW2 dataset from [2026 CV_HW2](https://drive.google.com/file/d/15yF3-CalFD1Bn2w6VV2vDYY87lDuONo0/view?usp=sharing) or run the following command in terminal,
-
+2. Download your checkpoints via `gdown` (**Note: Replace the Google Drive `<FILE_ID>` with the actual ID after you upload them!**):
 ```bash
-gdown --fuzzy https://drive.google.com/file/d/15yF3-CalFD1Bn2w6VV2vDYY87lDuONo0/view?usp=sharing
+# For ResNet18 model
+gdown https://drive.google.com/drive/folders/17n-nu-0_2-fwc7-5ezNhWOWPe0b95ska?usp=sharing -O checkpoint/resnet18_best.pth
+
+# For MyNet model (If necessary)
+gdown <PUT_MYNET_FILE_ID_HERE> -O checkpoint/mynet_best.pth
+```
+
+### B. Testing / Inference
+After the `.pth` weights are successfully seated inside the `checkpoint/` directory, evaluate the code by running:
+```bash
+# This script internally calls p2_inference.py and p2_eval.py
+bash p2_run_test.sh
+```
+This automatically produces a `pred.csv` and outputs the result via the TA's evaluation script.
+
+### C. Training from scratch
+To observe the entire training loop (including our semi-supervised pseudo-labeling augmentation technique), run:
+```bash
+bash p2_run_train.sh
 ```

@@ -23,48 +23,34 @@ from utils import set_seed, write_config_log, write_result_log
 
 def plot_learning_curve(
         logfile_dir: str,
-        result_lists: list
+        result_lists: dict
     ):
-    '''
-    Plot and save the learning curves under logfile_dir.
-    - Args:
-         - logfile_dir: str, the directory to save the learning curves.
-         - result_lists: dict, the dictionary contains the training and
-                         validation results with keys
-                         'train_acc', 'train_loss', 'val_acc', 'val_loss'.
-     - Returns:
-         - None
-    '''
-    ################################################################
-    # TODO:                                                        #
-    # Plot and save the learning curves under logfile_dir, you can #
-    # use plt.plot() and plt.savefig().                            #
-    #                                                              #
-    # NOTE:                                                        #
-    # You have to attach four plots of your best model in your     #
-    # report, which are:                                           #
-    #   1. training accuracy                                       #
-    #   2. training loss                                           #
-    #   3. validation accuracy                                     #
-    #   4. validation loss                                         #
-    #                                                              #
-    # NOTE:                                                        #
-    # This function is called at end of each epoch to avoid the    #
-    # plot being unsaved if early stop, so the result_lists's size #
-    # is not fixed.                                                #
-    ################################################################
+    plt.figure()
+    plt.plot(result_lists['train_acc'], label='train_acc')
+    plt.plot(result_lists['val_acc'], label='val_acc')
+    plt.title('Accuracy')
+    plt.legend()
+    plt.savefig(os.path.join(logfile_dir, 'accuracy.png'))
+    plt.close()
     
-    pass
+    plt.figure()
+    plt.plot(result_lists['train_loss'], label='train_loss')
+    plt.plot(result_lists['val_loss'], label='val_loss')
+    plt.title('Loss')
+    plt.legend()
+    plt.savefig(os.path.join(logfile_dir, 'loss.png'))
+    plt.close()
 
 def train(
         model: nn.Module,
         train_loader: torch.utils.data.DataLoader,
         val_loader: torch.utils.data.DataLoader,
+        unlabel_loader: torch.utils.data.DataLoader,
         logfile_dir: str,
         model_save_dir: str,
         criterion: nn.Module,
-        optimizer: torch.optim,
-        scheduler: torch.optim,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler._LRScheduler,
         device: torch.device
     ):
     '''
@@ -92,23 +78,55 @@ def train(
         train_start_time = time.time()
         train_loss = 0.0
         train_correct = 0.0
+        
+        if unlabel_loader is not None:
+            unlabel_iter = iter(unlabel_loader)
+            
         model.train()
         for batch, data in enumerate(train_loader):
             sys.stdout.write(f'\r[{epoch + 1}/{cfg.epochs}] Train batch: {batch + 1} / {len(train_loader)}')
             sys.stdout.flush()
+            
             # Data loading. (batch_size, 3, 32, 32), (batch_size)
             images, labels = data['images'].to(device), data['labels'].to(device)
+            
             # Forward pass. input: (batch_size, 3, 32, 32), output: (batch_size, 10)
             pred = model(images)
-            # Calculate loss.
             loss = criterion(pred, labels)
+            
+            # Pseudo-labeling for SSL
+            if unlabel_loader is not None:
+                try:
+                    u_data = next(unlabel_iter)
+                except StopIteration:
+                    unlabel_iter = iter(unlabel_loader)
+                    u_data = next(unlabel_iter)
+                
+                u_img = u_data['images'].to(device)
+                
+                # Get pseudo labels
+                model.eval()
+                with torch.no_grad():
+                    u_pred = model(u_img)
+                    u_prob = torch.softmax(u_pred, dim=1)
+                    max_probs, pseudo_labels = torch.max(u_prob, dim=1)
+                    mask = max_probs > 0.95
+                
+                model.train()
+                if mask.sum() > 0:
+                    u_pred_train = model(u_img[mask])
+                    loss_u = criterion(u_pred_train, pseudo_labels[mask])
+                    loss = loss + loss_u
+                    
             # Backprop. (update model parameters)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
             # Evaluate.
             train_correct += torch.sum(torch.argmax(pred, dim=1) == labels)
             train_loss += loss.item()
+            
         # Print training result
         train_time = time.time() - train_start_time
         train_acc = train_correct / len(train_loader.dataset)
@@ -124,17 +142,12 @@ def train(
             val_start_time = time.time()
             val_loss = 0.0
             val_correct = 0.0
-            #############################################################
-            # TODO:                                                     #
-            # Finish forward part in validation, you can refer to the   #
-            # training part.                                            #
-            #                                                           #
-            # NOTE:                                                     #
-            # You don't have to update parameters, just record the      #
-            # accuracy and loss.                                        #
-            #############################################################
-
-            ######################### TODO End ##########################
+            for batch, data in enumerate(val_loader):
+                images, labels = data['images'].to(device), data['labels'].to(device)
+                pred = model(images)
+                loss = criterion(pred, labels)
+                val_correct += torch.sum(torch.argmax(pred, dim=1) == labels)
+                val_loss += loss.item()
 
         # Print validation result
         val_time = time.time() - val_start_time
@@ -217,11 +230,12 @@ def main():
     model.to(device)
 
     ##### DATALOADER #####
-    ##### TODO: check dataset.py #####
     train_loader = get_dataloader(os.path.join(dataset_dir, 'train'),
                                   batch_size=cfg.batch_size, split='train')
     val_loader   = get_dataloader(os.path.join(dataset_dir, 'val'),
                                   batch_size=cfg.batch_size, split='val')
+    unlabel_loader = get_dataloader(os.path.join(dataset_dir, 'unlabel'),
+                                  batch_size=cfg.batch_size, split='unlabel')
 
     ##### LOSS & OPTIMIZER #####
     criterion = nn.CrossEntropyLoss()
@@ -235,10 +249,10 @@ def main():
                                                      gamma=0.1)
     
     ##### TRAINING & VALIDATION #####
-    ##### TODO: check train() in this file #####
     train(model=model,
           train_loader=train_loader,
           val_loader=val_loader,
+          unlabel_loader=unlabel_loader,
           logfile_dir=logfile_dir,
           model_save_dir=model_save_dir,
           criterion=criterion,

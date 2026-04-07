@@ -11,6 +11,7 @@ env/
 .venv/
 venv/
 pip-log.txt
+pip-delete-this-directory.txt
 
 # PyTorch / Models
 *.pth
@@ -28,4 +29,3 @@ p1/*.pkl
 # OS files
 .DS_Store
 Thumbs.db
-hw2_data.zip
