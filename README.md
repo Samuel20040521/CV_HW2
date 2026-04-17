@@ -42,10 +42,10 @@ mkdir -p checkpoint
 2. Download your checkpoints via `gdown` (**Note: Replace the Google Drive `<FILE_ID>` with the actual ID after you upload them!**):
 ```bash
 # For ResNet18 model
-gdown https://drive.google.com/drive/folders/17n-nu-0_2-fwc7-5ezNhWOWPe0b95ska?usp=sharing -O checkpoint/resnet18_best.pth
+gdown --id 1S7Lyt2JdPAoai_x_tHt-RVRyHaq2A2R0 -O checkpoint/resnet18_best.pth
 
 # For MyNet model (If necessary)
-gdown <PUT_MYNET_FILE_ID_HERE> -O checkpoint/mynet_best.pth
+gdown --id 10S4dcz1VDqIBM0w6PZGQ6XA6HYna7Xgo -O checkpoint/mynet_best.pth
 ```
 
 ### B. Testing / Inference

@@ -28,16 +28,16 @@ Conversely, the **Bag of SIFT** approach achieves a robust 60.8% accuracy. It ex
 Ans:
 |                 |     A (MyNet)    |     B (ResNet18)    |
 |-----------------|----------|----------|
-|     accuracy    |    ~64.2% (TBD)  |    68.56%  |
+|     accuracy    |    86.18%  |    92.98%  |
 
 - Print the network architecture & number of parameters of both models. What is the main difference between ResNet and other CNN architectures? (5%)
 Ans:
 **Number of parameters**:
-- **MyNet**: 620,362
+- **MyNet**: 3,231,626
 - **ResNet18**: 11,173,962
 
 **Network Architecture**:
-**MyNet** is a Simple 3-layer Convolutional Neural Network. It incorporates blocks of `Conv2d(3x3) -> ReLU -> MaxPool2d(2x2)` operating consecutively (channels scaling 32 -> 64 -> 128), finally flattened into two linear maps interweaved with Dropout.
+**MyNet**: Modified into a VGG-like deep architecture. It consists of multiple 3x3 convolutional blocks (`Conv2d(3x3) -> BatchNorm2d -> ReLU`), progressively scaling channels from 32 to 256. `MaxPool2d(2x2)` layers are used for downsampling. The features are then flattened and passed into a fully-connected layer with `BatchNorm1d` and `Dropout(0.5)` for regularization before outputting 10 classes.
 
 **ResNet18 (Modified)** retains the deep structure characteristic of the original ResNet architecture. However, the large 7x7 initial convolutional filter with stride 2 and the consecutive MaxPool layer were downscaled significantly into a single `Conv2d(3, 64, 3x3, stride=1, padding=1)`. This minimizes the abrupt initial 4x downsampling which would otherwise crush our small 32x32 feature maps.
 
@@ -47,17 +47,16 @@ ResNet fundamentally introduces **Residual (Skip) Connections**. Deep CNNs usual
 - Plot four learning curves (loss & accuracy) of the training process (train/validation) for both models. Total 8 plots. (8%)
 Ans: 
 **ResNet18**:
-![ResNet18 Accuracy](p2/experiment/resnet18_2026_04_08_00_47_41_default/log/accuracy.png)
-![ResNet18 Loss](p2/experiment/resnet18_2026_04_08_00_47_41_default/log/loss.png)
+![ResNet18 Accuracy](p2/experiment/resnet18_2026_04_17_15_36_11_default/log/accuracy.png)
+![ResNet18 Loss](p2/experiment/resnet18_2026_04_17_15_36_11_default/log/loss.png)
 
-*(Note: Replace the below with the actual paths after running MyNet)*
 **MyNet**:
-![MyNet Accuracy](p2/experiment/mynet_YOUR_TIMESTAMP/log/accuracy.png)
-![MyNet Loss](p2/experiment/mynet_YOUR_TIMESTAMP/log/loss.png)
+![MyNet Accuracy](p2/experiment/mynet_2026_04_17_15_51_20_default/log/accuracy.png)
+![MyNet Loss](p2/experiment/mynet_2026_04_17_15_51_20_default/log/loss.png)
 
 - Briefly describe what method do you apply on your best model? (e.g. data augmentation, model architecture, loss function, etc) (10%)
 Ans:
 Our highest-performing model is the modified **ResNet18**, and it leverages the following techniques:
-1. **Model Architecture Resizing**: The original pretrained ResNet18 is built for 224x224 ImageNet inputs. To map this properly on our 32x32 dataset context, we replaced `resnet.conv1` to a 3x3 kernel (stride=1, padding=1) and stripped away `resnet.maxpool`. This prevented critical feature destruction in the very first layers.
+1. **Model Architecture Resizing & Initialization**: The original pretrained ResNet18 is built for 224x224 ImageNet inputs. To map this properly on our 32x32 dataset context, we replaced `resnet.conv1` to a 3x3 kernel (stride=1, padding=1), stripped away `resnet.maxpool`, and applied Kaiming Normalization to stabilize the initial gradients.
 2. **Data Augmentation**: For the training images, a PyTorch transformation pipeline `transforms.RandomCrop(32, padding=4)` coupled with `transforms.RandomHorizontalFlip()` introduces strong rotational/translational invariances suppressing extreme overfitting on our 20k samples.
-3. **Semi-supervised Learning (Pseudo-labeling)**: Since the `unlabel` folder contains 30k unlabeled artifacts, we utilized Semi-supervised Learning algorithm dynamically inside the training loop. We performed inference on the unlabeled loader batch, calculated the softmax confidence, and selectively backpropagated the features into `nn.CrossEntropyLoss` that exceeded a fixed threshold ($Confidence > 0.95$). This essentially iteratively bootstraps and fortifies the network's understanding of semantic boundaries, massively propelling test-set reliability.
+3. **Training & Regularization**: We completely turned off the uncalibrated Semi-supervised Learning (Pseudo-labeling) at early epochs since the noise was severely holding back accuracy. We switched to an SGD optimizer with high momentum (0.9) and strong L2 weight decay (`1e-4`~`5e-4`), alongside a significantly larger batch size (128) for stabler Batch Normalization statistics and robust convergence.

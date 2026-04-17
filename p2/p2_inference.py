@@ -57,7 +57,16 @@ def main():
 
     ##### DATALOADER #####
     ##### TODO: check dataset.py #####
-    test_loader = get_dataloader(test_datadir, batch_size=1, split='test')
+    # Handle the case where test_datadir is the root p2_data path or the specific test split path
+    if os.path.exists(os.path.join(test_datadir, 'test', 'annotations.json')):
+        actual_test_dir = os.path.join(test_datadir, 'test')
+    elif os.path.exists(os.path.join(test_datadir, 'val', 'annotations.json')):
+        # For our local testing, we fallback to val if test doesn't exist
+        actual_test_dir = os.path.join(test_datadir, 'val')
+    else:
+        actual_test_dir = test_datadir
+        
+    test_loader = get_dataloader(actual_test_dir, batch_size=1, split='test')
 
     ##### INFERENCE #####
     predictions = []

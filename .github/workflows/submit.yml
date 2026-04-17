@@ -1,0 +1,55 @@
+name: Generate HW2 Submission Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release 標籤名稱 (e.g., v1.0, final-submission)'
+        required: true
+        default: 'final-submission'
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Submission Items
+        run: |
+          STUDENT_ID="B11202015"
+          DIR_NAME="${STUDENT_ID}_hw2"
+          ZIP_NAME="${STUDENT_ID}_hw2.zip"
+          
+          # 1. 建立根目錄與 p1, p2 資料夾
+          mkdir -p $DIR_NAME/p1
+          mkdir -p $DIR_NAME/p2/checkpoint
+          
+          # 2. 複製 Part 1 檔案 (針對 .pkl 不一定會被 push，所以加上容錯提示)
+          cp p1/p1.py p1/utils.py $DIR_NAME/p1/ 2>/dev/null || echo "Warning: p1.py or utils.py missing"
+          cp p1/vocab.pkl p1/test_image_feats.pkl p1/train_image_feats.pkl $DIR_NAME/p1/ 2>/dev/null || echo "Warning: p1 .pkl files not found."
+          
+          # 3. 複製 Part 2 檔案
+          cp p2/p2_train.py p2/p2_inference.py p2/config.py p2/model.py $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing p2 core python files."
+          cp p2/dataset.py p2/download.sh p2/p2_run_train.sh $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing dataset.py or bash scripts."
+          
+          # 若 checkpoint/ 下有 .pth 檔也會一起打包進去（一般情況下，如果有提供 download.sh 則不一定要附上）
+          cp p2/checkpoint/*.pth $DIR_NAME/p2/checkpoint/ 2>/dev/null || echo "No local .pth weights to package, using download.sh instead."
+          
+          # 4. 壓縮成 StudentID_hw2.zip (包含目錄名稱本身)
+          zip -r $ZIP_NAME $DIR_NAME/
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}-${{ github.run_id }}
+          name: "Submission: ${{ github.event.inputs.tag_name }}"
+          body: |
+            This release contains the automatically packaged submission for Computer Vision HW2.
+            Contains:
+            - `B11202015_hw2.zip`
+          files: |
+            B11202015_hw2.zip

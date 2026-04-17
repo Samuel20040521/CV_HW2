@@ -194,9 +194,14 @@ def main():
                         help='dataset directory', 
                         type=str, 
                         default='../hw2_data/p2_data/')
+    parser.add_argument('--model_type',
+                        help='model type (mynet or resnet18)',
+                        type=str,
+                        default=cfg.model_type)
     args = parser.parse_args()
 
     dataset_dir = args.dataset_dir
+    cfg.model_type = args.model_type
 
     # Experiment name
     exp_name = cfg.model_type \
@@ -234,16 +239,16 @@ def main():
                                   batch_size=cfg.batch_size, split='train')
     val_loader   = get_dataloader(os.path.join(dataset_dir, 'val'),
                                   batch_size=cfg.batch_size, split='val')
-    unlabel_loader = get_dataloader(os.path.join(dataset_dir, 'unlabel'),
-                                  batch_size=cfg.batch_size, split='unlabel')
+    unlabel_loader = None # get_dataloader(os.path.join(dataset_dir, 'unlabel'),
+                          #        batch_size=cfg.batch_size, split='unlabel')
 
     ##### LOSS & OPTIMIZER #####
     criterion = nn.CrossEntropyLoss()
     if cfg.use_adam:
-        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=1e-4) # Adam usually needs less weight decay
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=cfg.lr,
-                                    momentum=0.9, weight_decay=1e-6)
+                                    momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=cfg.milestones,
                                                      gamma=0.1)
