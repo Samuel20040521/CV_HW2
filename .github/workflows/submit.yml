@@ -33,8 +33,8 @@ jobs:
           cp p1/vocab.pkl p1/test_image_feats.pkl p1/train_image_feats.pkl $DIR_NAME/p1/ 2>/dev/null || echo "Warning: p1 .pkl files not found."
           
           # 3. 複製 Part 2 檔案
-          cp p2/p2_train.py p2/p2_inference.py p2/config.py p2/model.py $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing p2 core python files."
-          cp p2/dataset.py p2/download.sh p2/p2_run_train.sh $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing dataset.py or bash scripts."
+          cp p2/p2_train.py p2/p2_inference.py p2/p2_eval.py p2/config.py p2/model.py $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing p2 core python files."
+          cp p2/dataset.py p2/utils.py p2/download.sh p2/p2_run_train.sh p2/p2_run_test.sh $DIR_NAME/p2/ 2>/dev/null || echo "Warning: Missing dataset.py or bash scripts."
           
           # 若 checkpoint/ 下有 .pth 檔也會一起打包進去（一般情況下，如果有提供 download.sh 則不一定要附上）
           cp p2/checkpoint/*.pth $DIR_NAME/p2/checkpoint/ 2>/dev/null || echo "No local .pth weights to package, using download.sh instead."
